@@ -1,0 +1,9 @@
+<SMIRNOFF version="0.3" aromaticity_model="OEAroModel_MDL">
+  <HarmonicHeights version="0.3">
+    <HarmonicHeight
+      smirks="[*:1]-[#7X3:2](-[*:3])-[*:4]"
+      id="hh1"
+      k="100.0  kilojoule_per_mole / nanometer ** 2"
+      h0="1.0 nanometer"/>
+  </HarmonicHeights>
+</SMIRNOFF>

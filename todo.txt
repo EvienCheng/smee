@@ -1,0 +1,8 @@
+two minima: k1, k2 should be k in the smee jupyter notebook for training which parameters 
+
+try the qcengine api https://github.com/MolSSI/QCEngine/blob/master/qcengine/procedures/torsiondrive.py
+and figure out how to the add the custom forcefield
+
+figure out what is the change in pavan's new notebook (check package versions)
+fix the convert_twominima_handlers
+compute_twominima_energy 
