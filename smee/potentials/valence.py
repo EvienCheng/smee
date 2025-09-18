@@ -151,3 +151,42 @@ def compute_cosine_improper_torsion_energy(
         The computed potential energy [kcal / mol].
     """
     return _compute_cosine_torsion_energy(system, potential, conformer)
+
+
+# @smee.potentials.potential_energy_fn(
+#     smee.PotentialType.IMPROPER_TORSIONS,
+#     smee.EnergyFn.ANGLE_HARMONIC
+#     )
+
+@smee.potentials.potential_energy_fn(
+    "HarmonicHeight",
+    "HarmonicHeight"
+)
+def compute_harmonic_height_improper_energy(
+    system: smee.TensorSystem,
+    potential: smee.TensorPotential,
+    conformer: torch.Tensor,
+) -> torch.Tensor:
+    """Compute the potential energy [kcal / mol] of a set of impropers for a given
+    conformer using a harmonic potential of the form
+    ``1/2 * k * (h - h0) ** 2``.
+
+    Args:
+        system: The system to compute the energy for.
+        potential: The potential energy function to evaluate.
+        conformer: The conformer [Å] to evaluate the potential at with
+            ``shape=(n_confs, n_particles, 3)`` or ``shape=(n_particles, 3)``.
+
+    Returns:
+        The computed potential energy [kcal / mol].
+    """
+
+    parameters = smee.potentials.broadcast_parameters(system, potential)
+    particle_idxs = smee.potentials.broadcast_idxs(system, potential)
+
+    h = smee.geometry.compute_dihedrals(conformer, particle_idxs)
+
+    k = parameters[:, potential.parameter_cols.index("k")]
+    h0 = parameters[:, potential.parameter_cols.index("h0")]
+
+    return (0.5 * k * (h - h0) ** 2).sum(-1)

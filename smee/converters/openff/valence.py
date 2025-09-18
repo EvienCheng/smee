@@ -182,3 +182,30 @@ def convert_impropers(
     return convert_valence_handlers(
         handlers, "ImproperTorsions", ("k", "periodicity", "phase", "idivf")
     )
+
+
+@smee.converters.smirnoff_parameter_converter(
+    "HarmonicHeight", 
+    {
+        "k": _KCAL_PER_MOL / _ANGSTROM**2, 
+        "h0": _ANGSTROM,
+    },
+)
+def convert_harmonic_heights(
+    handlers: list[openff.interchange.smirnoff.SMIRNOFFCollection],
+) -> tuple[smee.TensorPotential, list[smee.ValenceParameterMap]]:
+    """Convert SMIRNOFF HarmonicHeight handlers into tensor potentials and maps.
+
+    Args:
+        handlers: The list of SMIRNOFF harmonic height handlers.
+
+    Returns:
+        The potential and parameter maps.
+    """
+    potential, parameter_maps = convert_valence_handlers(
+        handlers, "HarmonicHeight", ("k", "h0")
+    )
+
+    potential.fn = "HarmonicHeight"
+
+    return potential, parameter_maps
