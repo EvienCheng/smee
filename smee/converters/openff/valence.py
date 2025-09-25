@@ -209,3 +209,60 @@ def convert_harmonic_heights(
     potential.fn = "HarmonicHeight"
 
     return potential, parameter_maps
+
+
+
+@smee.converters.smirnoff_parameter_converter(
+    "LeeKrimm", 
+    {
+        "V2": _KCAL_PER_MOL, 
+        "V4": _KCAL_PER_MOL,
+        "t": _UNITLESS,
+        "s": _UNITLESS
+    },
+)
+def convert_lee_krimm(
+    handlers: list[openff.interchange.smirnoff.SMIRNOFFCollection],
+) -> tuple[smee.TensorPotential, list[smee.ValenceParameterMap]]:
+    """Convert SMIRNOFF HarmonicHeight handlers into tensor potentials and maps.
+
+    Args:
+        handlers: The list of SMIRNOFF harmonic height handlers.
+
+    Returns:
+        The potential and parameter maps.
+    """
+    potential, parameter_maps = convert_valence_handlers(
+        handlers, "LeeKrimm", ("V2", "V4", "t", "s")
+    )
+
+    potential.fn = "LeeKrimm"
+
+    return potential, parameter_maps
+
+
+@smee.converters.smirnoff_parameter_converter(
+    "HarmonicAngle", 
+    {
+        "k": _KCAL_PER_MOL / _RADIANS**2, 
+        "theta0": _RADIANS,
+    },
+)
+def convert_harmonic_angle(
+    handlers: list[openff.interchange.smirnoff.SMIRNOFFCollection],
+) -> tuple[smee.TensorPotential, list[smee.ValenceParameterMap]]:
+    """Convert SMIRNOFF HarmonicAngle handlers into tensor potentials and maps.
+
+    Args:
+        handlers: The list of SMIRNOFF harmonic angl  handlers.
+
+    Returns:
+        The potential and parameter maps.
+    """
+    potential, parameter_maps = convert_valence_handlers(
+        handlers, "HarmonicAngle", ("k", "theta0")
+    )
+
+    potential.fn = "HarmonicAngle"
+
+    return potential, parameter_maps
