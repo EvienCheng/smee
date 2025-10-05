@@ -159,6 +159,42 @@ def compute_dihedrals(
 
     return phi
 
+def compute_plane_dihedrals(conformer: torch.Tensor, atom_indices: torch.Tensor) -> torch.Tensor:
+    if len(atom_indices) == 0:
+        return smee.utils.tensor_like([], other=conformer)
+
+    is_batched = conformer.ndim == 3
+    if not is_batched:
+        conformer = conformer.unsqueeze(0)
+
+    i = conformer[:, atom_indices[:, 0]]
+    j = conformer[:, atom_indices[:, 1]]
+    k = conformer[:, atom_indices[:, 2]]
+    l = conformer[:, atom_indices[:, 3]]
+
+    v1 = j - i
+    v2 = k - i
+    n1 = torch.cross(v1, v2, dim=-1)
+
+    v3 = l - i
+    n2 = torch.cross(v2, v3, dim=-1)
+
+    n1_norm = torch.norm(n1, dim=-1, keepdim=True)
+    n2_norm = torch.norm(n2, dim=-1, keepdim=True)
+    n1 = n1 / n1_norm
+    n2 = n2 / n2_norm
+
+    cos_angle = (n1 * n2).sum(dim=-1)
+    cos_angle = torch.clamp(cos_angle, -1.0, 1.0)
+
+    sign = torch.sign((torch.cross(n1, n2, dim=-1) * v2).sum(dim=-1))
+    angle = torch.acos(cos_angle) * sign
+
+    if not is_batched:
+        angle = angle.squeeze(0)
+
+    return angle
+
 
 def _build_v_site_coord_frames(
     v_sites: "smee.VSiteMap",

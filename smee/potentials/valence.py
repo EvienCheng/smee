@@ -274,7 +274,7 @@ def compute_harmonic_plane_angle_energy(
     The potential has the form:
         1/2 * k * (theta - theta0)^2
 
-    where theta is the dihedral angle between planes (i,j,k) and (j,k,l).
+    where theta is the dihedral angle between planes (i,j,k) and (i,k,l).
 
     Args:
         system: The system to compute the energy for.
@@ -292,7 +292,7 @@ def compute_harmonic_plane_angle_energy(
     parameters = smee.potentials.broadcast_parameters(system, potential)
     particle_idxs = smee.potentials.broadcast_idxs(system, potential)
 
-    theta = smee.geometry.compute_dihedrals(conformer, particle_idxs)
+    theta = smee.geometry.compute_plane_dihedrals(conformer, particle_idxs)
 
     theta = torch.abs(theta)
 
