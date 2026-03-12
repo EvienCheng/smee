@@ -32,6 +32,11 @@ class PotentialType(_StrEnum):
     PROPER_TORSIONS = "ProperTorsions"
     IMPROPER_TORSIONS = "ImproperTorsions"
 
+    UREY_BRADLEY = "UreyBradley"
+    HARMONIC_HEIGHT = "HarmonicHeight"
+    LEE_KRIMM = "LeeKrimm"
+    HARMONIC_ANGLE_OOP = "HarmonicAngle"
+
     VDW = "vdW"
     ELECTROSTATICS = "Electrostatics"
 
@@ -54,6 +59,10 @@ class EnergyFn(_StrEnum):
     ANGLE_HARMONIC = "k/2*(theta-angle)**2"
 
     TORSION_COSINE = "k*(1+cos(periodicity*theta-phase))"
+
+    HARMONIC_HEIGHT = "k/2*(h-h0)**2"
+    LEE_KRIMM = "V2*phi**2+V4*phi**4;phi=|h|^t/(1-|h|^s)"
+    OOP_HARMONIC_ANGLE = "k/2*(theta-theta0)**2"
 
 
 CUTOFF_ATTRIBUTE = "cutoff"
