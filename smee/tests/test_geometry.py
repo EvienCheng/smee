@@ -17,6 +17,8 @@ from smee.geometry import (
     compute_angles,
     compute_bond_vectors,
     compute_dihedrals,
+    compute_oop_angles,
+    compute_pyramid_heights,
     compute_v_site_coords,
 )
 
@@ -49,7 +51,9 @@ def compute_openmm_v_sites(
 
 
 @pytest.mark.parametrize(
-    "geometry_function", [compute_angles, compute_dihedrals, compute_bond_vectors]
+    "geometry_function",
+    [compute_angles, compute_dihedrals, compute_bond_vectors,
+     compute_pyramid_heights, compute_oop_angles],
 )
 def test_compute_geometry_no_atoms(geometry_function):
     valence_terms = geometry_function(torch.tensor([]), torch.tensor([]))
@@ -173,6 +177,94 @@ def test_compute_dihedrals_batched():
         lambda x: compute_dihedrals(x, atom_indices), conformer
     )
     assert not torch.isnan(gradients).any() and not torch.isinf(gradients).any()
+
+
+def test_compute_pyramid_heights():
+    # p1 at (0.5, 0.5, 2.0) above the xy-plane defined by p2, p3, p4
+    conformer = torch.tensor(
+        [[0.5, 0.5, 2.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+    atom_indices = torch.tensor([[0, 1, 2, 3]])
+
+    heights = compute_pyramid_heights(conformer, atom_indices)
+    assert heights.shape == (1,)
+
+    assert torch.allclose(heights, torch.tensor([2.0]))
+
+    # p1 below the plane → negative height
+    conformer_below = conformer.clone()
+    conformer_below[0, 2] = -1.5
+    heights_below = compute_pyramid_heights(conformer_below, atom_indices)
+    assert torch.allclose(heights_below, torch.tensor([-1.5]))
+
+    # Check gradients are well-defined
+    gradients = torch.autograd.functional.jacobian(
+        lambda x: compute_pyramid_heights(x, atom_indices), conformer
+    )
+    assert not torch.isnan(gradients).any() and not torch.isinf(gradients).any()
+
+
+def test_compute_pyramid_heights_batched():
+    conformer = torch.tensor(
+        [
+            [[0.5, 0.5, 2.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[0.5, 0.5, -3.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        ]
+    )
+    atom_indices = torch.tensor([[0, 1, 2, 3]])
+
+    heights = compute_pyramid_heights(conformer, atom_indices)
+    assert heights.shape == (2, 1)
+
+    assert torch.allclose(heights, torch.tensor([[2.0], [-3.0]]))
+
+
+def test_compute_oop_angles():
+    # p1=center at origin, p2=oop directly along z, p3/p4 in xy-plane
+    # Expected: theta = pi/2
+    conformer = torch.tensor(
+        [[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+    atom_indices = torch.tensor([[0, 1, 2, 3]])
+
+    angles = compute_oop_angles(conformer, atom_indices)
+    assert angles.shape == (1,)
+
+    assert torch.allclose(angles, torch.tensor([numpy.pi / 2.0]))
+
+    # p2 in the plane → theta = 0
+    conformer_flat = torch.tensor(
+        [[0.0, 0.0, 0.0], [1.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+    angles_flat = compute_oop_angles(conformer_flat, atom_indices)
+    assert torch.allclose(angles_flat, torch.tensor([0.0]), atol=1e-6)
+
+    # Check gradients are well-defined (use a non-extreme angle to avoid
+    # arcsin singularity at ±1)
+    conformer_grad = torch.tensor(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+    gradients = torch.autograd.functional.jacobian(
+        lambda x: compute_oop_angles(x, atom_indices), conformer_grad
+    )
+    assert not torch.isnan(gradients).any() and not torch.isinf(gradients).any()
+
+
+def test_compute_oop_angles_batched():
+    conformer = torch.tensor(
+        [
+            [[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[0.0, 0.0, 0.0], [1.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        ]
+    )
+    atom_indices = torch.tensor([[0, 1, 2, 3]])
+
+    angles = compute_oop_angles(conformer, atom_indices)
+    assert angles.shape == (2, 1)
+
+    assert torch.allclose(
+        angles, torch.tensor([[numpy.pi / 2.0], [0.0]]), atol=1e-6
+    )
 
 
 def test_build_v_site_coordinate_frames():

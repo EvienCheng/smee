@@ -8,8 +8,15 @@ from smee.potentials.valence import (
     compute_cosine_proper_torsion_energy,
     compute_harmonic_angle_energy,
     compute_harmonic_bond_energy,
+<<<<<<< HEAD
+    compute_harmonic_height_energy,
+    compute_lee_krimm_energy,
+    compute_oop_harmonic_angle_energy,
+    compute_urey_bradley_energy,
+=======
     compute_linear_angle_energy,
     compute_linear_bond_energy,
+>>>>>>> 0d0b42d2096b27ea518bc24c18979b40de5ce93e
 )
 
 
@@ -156,6 +163,115 @@ def test_compute_cosine_torsion_energy(expected_shape, energy_function, phi_sign
     assert energy.shape == expected_shape
 
 
+<<<<<<< HEAD
+@pytest.mark.parametrize("expected_shape", [torch.Size([]), (1,)])
+def test_compute_urey_bradley_energy(expected_shape):
+    """Test Urey-Bradley 1-3 harmonic energy on a simple 2-atom pair."""
+    conformer = torch.tensor(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+
+    if expected_shape == (1,):
+        conformer = torch.unsqueeze(conformer, 0)
+
+    # Urey-Bradley acts on 1-3 pairs; use atoms 0 and 2
+    atom_indices = torch.tensor([[0, 2]])
+    parameters = torch.tensor([[3.0, 1.5]], requires_grad=True)
+
+    potential, system = _mock_models(atom_indices, parameters, ("k", "length"))
+
+    energy = compute_urey_bradley_energy(system, potential, conformer)
+    energy.backward()
+
+    distance = torch.tensor(1.0)  # |p2 - p0| = 1.0
+    expected_energy = 0.5 * parameters[0, 0] * (distance - parameters[0, 1]) ** 2
+
+    assert energy.shape == expected_shape
+    assert torch.isclose(energy, expected_energy)
+    assert not torch.allclose(parameters.grad, torch.tensor(0.0))
+
+
+@pytest.mark.parametrize("expected_shape", [torch.Size([]), (1,)])
+def test_compute_harmonic_height_energy(expected_shape):
+    """Test harmonic pyramid-height energy with atom above xy-plane."""
+    # p1 (central) at height 2.0 above plane of p2, p3, p4
+    conformer = torch.tensor(
+        [[0.5, 0.5, 2.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+
+    if expected_shape == (1,):
+        conformer = torch.unsqueeze(conformer, 0)
+
+    atom_indices = torch.tensor([[0, 1, 2, 3]])
+    parameters = torch.tensor([[4.0, 1.5]], requires_grad=True)
+
+    potential, system = _mock_models(atom_indices, parameters, ("k", "h0"))
+
+    energy = compute_harmonic_height_energy(system, potential, conformer)
+    energy.backward()
+
+    # h = 2.0, h0 = 1.5, k = 4.0
+    expected_energy = 0.5 * parameters[0, 0] * (torch.tensor(2.0) - parameters[0, 1]) ** 2
+
+    assert energy.shape == expected_shape
+    assert torch.isclose(energy, expected_energy)
+    assert not torch.allclose(parameters.grad, torch.tensor(0.0))
+
+
+@pytest.mark.parametrize("expected_shape", [torch.Size([]), (1,)])
+def test_compute_lee_krimm_energy(expected_shape):
+    """Test Lee-Krimm energy with known pyramid height."""
+    # p1 at height 0.3 (small enough that |h|^s < 1)
+    conformer = torch.tensor(
+        [[0.0, 0.0, 0.3], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+
+    if expected_shape == (1,):
+        conformer = torch.unsqueeze(conformer, 0)
+
+    atom_indices = torch.tensor([[0, 1, 2, 3]])
+    parameters = torch.tensor([[2.0, 0.5, 2.0, 1.0]], requires_grad=True)
+
+    potential, system = _mock_models(atom_indices, parameters, ("V2", "V4", "t", "s"))
+
+    energy = compute_lee_krimm_energy(system, potential, conformer)
+    energy.backward()
+
+    # h = 0.3, V2 = 2.0, V4 = 0.5, t = 2.0, s = 1.0
+    abs_h = torch.tensor(0.3)
+    phi = abs_h.pow(2.0) / (1.0 - abs_h.pow(1.0))
+    expected_energy = parameters[0, 0] * phi**2 + parameters[0, 1] * phi**4
+
+    assert energy.shape == expected_shape
+    assert torch.isclose(energy, expected_energy)
+    assert not torch.allclose(parameters.grad, torch.tensor(0.0))
+
+
+@pytest.mark.parametrize("expected_shape", [torch.Size([]), (1,)])
+def test_compute_oop_harmonic_angle_energy(expected_shape):
+    """Test Wilson-Decius out-of-plane harmonic angle energy."""
+    # p1=center at origin, p2=oop along z, p3/p4 in xy-plane → theta=pi/2
+    conformer = torch.tensor(
+        [[0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+    )
+
+    if expected_shape == (1,):
+        conformer = torch.unsqueeze(conformer, 0)
+
+    atom_indices = torch.tensor([[0, 1, 2, 3]])
+    parameters = torch.tensor([[2.0, 0.0]], requires_grad=True)
+
+    potential, system = _mock_models(atom_indices, parameters, ("k", "theta0"))
+
+    energy = compute_oop_harmonic_angle_energy(system, potential, conformer)
+    energy.backward()
+
+    theta = torch.tensor(torch.pi / 2.0)
+    expected_energy = 0.5 * parameters[0, 0] * (theta - parameters[0, 1]) ** 2
+
+    assert energy.shape == expected_shape
+    assert torch.isclose(energy, expected_energy)
+=======
 @pytest.mark.parametrize(
     "conformer, expected_shape",
     [
@@ -257,4 +373,5 @@ def test_compute_linear_angle_energy(conformer, expected_shape):
     expected_energy = 0.5 * k_harmonic[0] * (torch.pi / 2.0 - angle_harmonic[0]) ** 2
 
     assert torch.isclose(energy, expected_energy, atol=1e-6)
+>>>>>>> 0d0b42d2096b27ea518bc24c18979b40de5ce93e
     assert not torch.allclose(parameters.grad, torch.tensor(0.0))

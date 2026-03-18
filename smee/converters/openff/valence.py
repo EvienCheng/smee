@@ -182,3 +182,59 @@ def convert_impropers(
     return convert_valence_handlers(
         handlers, "ImproperTorsions", ("k", "periodicity", "phase", "idivf")
     )
+
+
+@smee.converters.smirnoff_parameter_converter(
+    "UreyBradley", {"k": _KCAL_PER_MOL / _ANGSTROM**2, "length": _ANGSTROM}
+)
+def convert_urey_bradley(
+    handlers: list[openff.interchange.smirnoff.SMIRNOFFCollection],
+) -> tuple[smee.TensorPotential, list[smee.ValenceParameterMap]]:
+    return convert_valence_handlers(handlers, "UreyBradley", ("k", "length"))
+
+
+@smee.converters.smirnoff_parameter_converter(
+    "HarmonicHeight", {"k": _KCAL_PER_MOL / _ANGSTROM**2, "h0": _ANGSTROM}
+)
+def convert_harmonic_height(
+    handlers: list[openff.interchange.smirnoff.SMIRNOFFCollection],
+) -> tuple[smee.TensorPotential, list[smee.ValenceParameterMap]]:
+    potential, parameter_maps = convert_valence_handlers(
+        handlers, "HarmonicHeight", ("k", "h0")
+    )
+    potential.fn = smee.EnergyFn.HARMONIC_HEIGHT
+    return potential, parameter_maps
+
+
+@smee.converters.smirnoff_parameter_converter(
+    "LeeKrimm",
+    {
+        "V2": _KCAL_PER_MOL,
+        "V4": _KCAL_PER_MOL,
+        "t": _UNITLESS,
+        "s": _UNITLESS,
+    },
+)
+def convert_lee_krimm(
+    handlers: list[openff.interchange.smirnoff.SMIRNOFFCollection],
+) -> tuple[smee.TensorPotential, list[smee.ValenceParameterMap]]:
+    potential, parameter_maps = convert_valence_handlers(
+        handlers, "LeeKrimm", ("V2", "V4", "t", "s")
+    )
+    potential.fn = smee.EnergyFn.LEE_KRIMM
+    return potential, parameter_maps
+
+
+@smee.converters.smirnoff_parameter_converter(
+    "HarmonicAngle",
+    {"k": _KCAL_PER_MOL / _RADIANS**2, "theta0": _RADIANS},
+)
+def convert_harmonic_angle_oop(
+    handlers: list[openff.interchange.smirnoff.SMIRNOFFCollection],
+) -> tuple[smee.TensorPotential, list[smee.ValenceParameterMap]]:
+    potential, parameter_maps = convert_valence_handlers(
+        handlers, "HarmonicAngle", ("k", "theta0")
+    )
+    potential.fn = smee.EnergyFn.OOP_HARMONIC_ANGLE
+    return potential, parameter_maps
+

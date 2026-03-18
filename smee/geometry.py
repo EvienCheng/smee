@@ -160,6 +160,130 @@ def compute_dihedrals(
     return phi
 
 
+def compute_pyramid_heights(
+    conformer: torch.Tensor, atom_indices: torch.Tensor
+) -> torch.Tensor:
+    """Computes the signed height of atom p1 above the plane defined by atoms
+    (p2, p3, p4) for each quartet specified by ``atom_indices``.
+
+    The height is computed as:
+
+    .. math::
+
+        h = \\frac{(\\mathbf{p}_1 - \\mathbf{p}_2) \\cdot \\mathbf{n}}{|\\mathbf{n}|}
+
+    where :math:`\\mathbf{n} = (\\mathbf{p}_3 - \\mathbf{p}_2) \\times
+    (\\mathbf{p}_4 - \\mathbf{p}_2)`.
+
+    Args:
+        conformer: The conformer [Å] with ``shape=(n_atoms, 3)`` or
+            ``shape=(n_confs, n_atoms, 3)``.
+        atom_indices: The indices of the atoms with ``shape=(n_impropers, 4)``
+            where columns are ``(p1_central, p2, p3, p4)``.
+
+    Returns:
+        The signed pyramid heights [Å].
+    """
+
+    if len(atom_indices) == 0:
+        return smee.utils.tensor_like([], other=conformer)
+
+    is_batched = conformer.ndim == 3
+
+    if not is_batched:
+        conformer = torch.unsqueeze(conformer, 0)
+
+    p1 = conformer[:, atom_indices[:, 0]]
+    p2 = conformer[:, atom_indices[:, 1]]
+    p3 = conformer[:, atom_indices[:, 2]]
+    p4 = conformer[:, atom_indices[:, 3]]
+
+    v32 = p3 - p2
+    v42 = p4 - p2
+    normal = torch.cross(v32, v42, dim=-1)
+    normal_mag = torch.norm(normal, dim=-1, keepdim=True).clamp(min=1e-10)
+
+    v12 = p1 - p2
+    h = (v12 * normal).sum(dim=-1) / normal_mag.squeeze(-1)
+
+    if not is_batched:
+        h = torch.squeeze(h, dim=0)
+
+    return h
+
+
+def compute_oop_angles(
+    conformer: torch.Tensor, atom_indices: torch.Tensor
+) -> torch.Tensor:
+    """Computes the Wilson–Decius out-of-plane (bond-plane) angle for each quartet
+    specified by ``atom_indices``.
+
+    Particle ordering: ``(p1, p2, p3, p4)`` where p1 is the plane center, p2 is
+    the out-of-plane atom, and p3/p4 are the remaining in-plane atoms.
+
+    The angle is:
+
+    .. math::
+
+        \\theta = \\arcsin\\!\\left(
+            \\frac{(\\hat{\\mathbf{v}}_{12} \\times \\hat{\\mathbf{v}}_{13})
+                   \\cdot \\hat{\\mathbf{v}}_{\\text{oop}}}
+                  {|\\hat{\\mathbf{v}}_{12} \\times \\hat{\\mathbf{v}}_{13}|}
+        \\right)
+
+    where :math:`\\mathbf{v}_{12} = \\mathbf{p}_3 - \\mathbf{p}_1`,
+    :math:`\\mathbf{v}_{13} = \\mathbf{p}_4 - \\mathbf{p}_1`, and
+    :math:`\\mathbf{v}_{\\text{oop}} = \\mathbf{p}_2 - \\mathbf{p}_1`.
+
+    Args:
+        conformer: The conformer [Å] with ``shape=(n_atoms, 3)`` or
+            ``shape=(n_confs, n_atoms, 3)``.
+        atom_indices: The indices of the atoms with ``shape=(n_terms, 4)``
+            where columns are ``(p1_center, p2_oop, p3_plane, p4_plane)``.
+
+    Returns:
+        The out-of-plane angles [rad].
+    """
+
+    if len(atom_indices) == 0:
+        return smee.utils.tensor_like([], other=conformer)
+
+    is_batched = conformer.ndim == 3
+
+    if not is_batched:
+        conformer = torch.unsqueeze(conformer, 0)
+
+    p1 = conformer[:, atom_indices[:, 0]]
+    p2 = conformer[:, atom_indices[:, 1]]
+    p3 = conformer[:, atom_indices[:, 2]]
+    p4 = conformer[:, atom_indices[:, 3]]
+
+    v12 = p3 - p1
+    v13 = p4 - p1
+    v_oop = p2 - p1
+
+    r12 = torch.norm(v12, dim=-1, keepdim=True).clamp(min=1e-10)
+    r13 = torch.norm(v13, dim=-1, keepdim=True).clamp(min=1e-10)
+    r_oop = torch.norm(v_oop, dim=-1, keepdim=True).clamp(min=1e-10)
+
+    v12_hat = v12 / r12
+    v13_hat = v13 / r13
+    v_oop_hat = v_oop / r_oop
+
+    cross = torch.cross(v12_hat, v13_hat, dim=-1)
+    cross_norm = torch.norm(cross, dim=-1, keepdim=True).clamp(min=1e-10)
+
+    sin_theta = (cross * v_oop_hat).sum(dim=-1) / cross_norm.squeeze(-1)
+    sin_theta = sin_theta.clamp(-1.0, 1.0)
+
+    theta = torch.asin(sin_theta)
+
+    if not is_batched:
+        theta = torch.squeeze(theta, dim=0)
+
+    return theta
+
+
 def _build_v_site_coord_frames(
     v_sites: "smee.VSiteMap",
     conformer: torch.Tensor,
