@@ -8,15 +8,12 @@ from smee.potentials.valence import (
     compute_cosine_proper_torsion_energy,
     compute_harmonic_angle_energy,
     compute_harmonic_bond_energy,
-<<<<<<< HEAD
     compute_harmonic_height_energy,
     compute_lee_krimm_energy,
     compute_oop_harmonic_angle_energy,
     compute_urey_bradley_energy,
-=======
     compute_linear_angle_energy,
     compute_linear_bond_energy,
->>>>>>> 0d0b42d2096b27ea518bc24c18979b40de5ce93e
 )
 
 
@@ -163,7 +160,6 @@ def test_compute_cosine_torsion_energy(expected_shape, energy_function, phi_sign
     assert energy.shape == expected_shape
 
 
-<<<<<<< HEAD
 @pytest.mark.parametrize("expected_shape", [torch.Size([]), (1,)])
 def test_compute_urey_bradley_energy(expected_shape):
     """Test Urey-Bradley 1-3 harmonic energy on a simple 2-atom pair."""
@@ -271,7 +267,6 @@ def test_compute_oop_harmonic_angle_energy(expected_shape):
 
     assert energy.shape == expected_shape
     assert torch.isclose(energy, expected_energy)
-=======
 @pytest.mark.parametrize(
     "conformer, expected_shape",
     [
@@ -342,6 +337,7 @@ def test_compute_linear_angle_energy(conformer, expected_shape):
     Should equal harmonic: 0.5 * k * (theta - angle)^2 when k=k1+k2 and angle=(k1*a1+k2*a2)/(k1+k2)
     """
     atom_indices = torch.tensor([[0, 1, 2]])
+    
 
     # Original harmonic parameters from test_compute_harmonic_angle_energy
     k_harmonic = torch.tensor([200.0])
@@ -373,5 +369,4 @@ def test_compute_linear_angle_energy(conformer, expected_shape):
     expected_energy = 0.5 * k_harmonic[0] * (torch.pi / 2.0 - angle_harmonic[0]) ** 2
 
     assert torch.isclose(energy, expected_energy, atol=1e-6)
->>>>>>> 0d0b42d2096b27ea518bc24c18979b40de5ce93e
     assert not torch.allclose(parameters.grad, torch.tensor(0.0))
